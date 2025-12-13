@@ -232,6 +232,7 @@ int main()
 
     // Game objects
     point plat[PLATFORM_COUNT];
+    bool platScored[PLATFORM_COUNT]; // Track which platforms have been scored
     int x = WINDOW_WIDTH / 2, y = WINDOW_HEIGHT - 145, h = CAMERA_THRESHOLD;
     float dx = 0, dy = 0;
     int frameCounter = 0; // For smooth animations
@@ -244,11 +245,13 @@ int main()
         {
             plat[i].x = rand() % (SCREEN_BOUNDARY_RIGHT - PLATFORM_WIDTH);
             plat[i].y = i * PLATFORM_SPACING;
+            platScored[i] = false; // Reset scoring status
         }
         // Ensure there's always a platform directly beneath the starting position
         // Place a platform at the bottom where the player starts
         plat[9].x = WINDOW_WIDTH / 2 - PLATFORM_WIDTH / 2;
         plat[9].y = WINDOW_HEIGHT - 80;
+        platScored[9] = false; // Reset starting platform scoring
 
         maxHeight = WINDOW_HEIGHT;
         minPlayerY = WINDOW_HEIGHT;
@@ -398,6 +401,13 @@ int main()
                     (dy > 0))
                 {
                     dy = -JUMP_POWER;
+
+                    // Award points if this platform hasn't been scored yet
+                    if (!platScored[i])
+                    {
+                        currentScore += 10;   // Points per platform
+                        platScored[i] = true; // Mark platform as scored
+                    }
                 }
             }
 
@@ -424,6 +434,7 @@ int main()
                     if (plat[i].y > WINDOW_HEIGHT)
                     {
                         plat[i].y = -PLATFORM_HEIGHT;
+                        platScored[i] = false; // Reset scoring status for recycled platform
 
                         // Find the highest platform to maintain spacing
                         int maxPlatformY = 0;
@@ -438,13 +449,6 @@ int main()
                         plat[i].x = rand() % (SCREEN_BOUNDARY_RIGHT - PLATFORM_WIDTH);
                     }
                 }
-            }
-
-            // Update score based on player's height - increment when player climbs higher (Y decreases)
-            if (y < minPlayerY)
-            {
-                currentScore += (minPlayerY - y) / 10; // Score based on distance climbed
-                minPlayerY = y;
             }
         }
 
