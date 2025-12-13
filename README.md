@@ -56,9 +56,6 @@ Doodle Jump is a classic arcade-style platformer game built with C++ and SFML (S
 
 ```
 Doodle_Jump/
-├── Doodle_Jump.cpp          # Main game source code
-├── Doodle_Jump.vcxproj      # Visual Studio project file
-├── Doodle_Jump.vcxproj.filters
 ├── images/                  # Game assets directory
 │   ├── background.png       # Game background image
 │   ├── platform.png         # Platform sprite
