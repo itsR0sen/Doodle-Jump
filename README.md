@@ -2,8 +2,16 @@
 
 ## Author
 
-**Mosharof Rosen**  
+**Md. Mosharof Hossain**  
 Department of Software Engineering  
+Shahjalal University of Science and Technology (SUST)
+
+---
+
+## Co-Author
+
+**KM Abdul Alim Shahin**  
+Department of Software Engineering
 Shahjalal University of Science and Technology (SUST)
 
 ---
