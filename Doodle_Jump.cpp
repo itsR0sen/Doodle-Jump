@@ -6,14 +6,12 @@
 #include <cmath>
 using namespace sf;
 
-// ============================================================
-// GAME CONSTANTS
-// ============================================================
+// Game constants
 const int WINDOW_WIDTH = 400;
 const int WINDOW_HEIGHT = 533;
 const int PLATFORM_COUNT = 10;
-const int PLATFORM_SPACING = 60; // Increased spacing for less crowding
-const int MIN_PLATFORMS = 4;     // Minimum platforms in game (hard mode)
+const int PLATFORM_SPACING = 60;
+const int MIN_PLATFORMS = 4;
 const int PLAYER_WIDTH = 50;
 const int PLAYER_HEIGHT = 70;
 const int PLATFORM_WIDTH = 68;
@@ -24,15 +22,14 @@ const int PLAYER_SPEED = 4;
 const int SCREEN_BOUNDARY_RIGHT = 350;
 const int SCREEN_BOUNDARY_LEFT = 0;
 const int CAMERA_THRESHOLD = 200;
-const int SCORE_INCREMENT = 1;                 // Increased frequency of score updates
-const int DIFFICULTY_SCORE_THRESHOLD = 100;    // Score needed to reduce platforms by 1
-const Color HOVER_COLOR = Color(255, 200, 87); // Golden
+const int SCORE_INCREMENT = 1;
+const int DIFFICULTY_SCORE_THRESHOLD = 100;
+const Color HOVER_COLOR = Color(255, 200, 87);
 const Color TEXT_COLOR = Color::White;
-const Color SECONDARY_TEXT_COLOR = Color(200, 220, 255); // Light blue
-const Color ACCENT_COLOR = Color(0, 255, 150);           // Bright green/cyan
-const Color BUTTON_BG_COLOR = Color(40, 50, 80);         // Dark blue for buttons
+const Color SECONDARY_TEXT_COLOR = Color(200, 220, 255);
+const Color ACCENT_COLOR = Color(0, 255, 150);
+const Color BUTTON_BG_COLOR = Color(40, 50, 80);
 
-// UI Layout constants
 const int BUTTON_WIDTH = 120;
 const int BUTTON_HEIGHT = 50;
 const int BUTTON_SPACING = 20;
@@ -62,12 +59,10 @@ void saveHighScore(int score)
     file.close();
 }
 
-// Helper function to create a styled button with outline effect
 void drawStyledButton(RenderWindow &app, const std::string &label, const Font &font,
                       const Vector2f &position, const Vector2f &size,
                       bool isHovered, int fontSize)
 {
-    // Button background - show subtle background always, highlight on hover
     RectangleShape buttonBg(size);
     buttonBg.setPosition(position);
     buttonBg.setFillColor(isHovered ? Color(60, 70, 100) : Color(30, 40, 70));
@@ -75,13 +70,11 @@ void drawStyledButton(RenderWindow &app, const std::string &label, const Font &f
     buttonBg.setOutlineColor(isHovered ? HOVER_COLOR : Color(100, 120, 150));
     app.draw(buttonBg);
 
-    // Button text - immediate color change on hover
     Text buttonText(font);
     buttonText.setString(label);
     buttonText.setCharacterSize(fontSize);
     buttonText.setFillColor(isHovered ? HOVER_COLOR : TEXT_COLOR);
 
-    // Properly center text in button area using local bounds
     FloatRect textBounds = buttonText.getLocalBounds();
     float textX = position.x + (size.x - textBounds.size.x) / 2 - textBounds.position.x;
     float textY = position.y + (size.y - textBounds.size.y) / 2 - textBounds.position.y;
@@ -93,31 +86,25 @@ int main()
 {
     srand((unsigned int)time(0));
 
-    // Window setup
     RenderWindow app(VideoMode(Vector2u(WINDOW_WIDTH, WINDOW_HEIGHT)), "Doodle Jump");
     app.setFramerateLimit(60);
     app.setTitle("Doodle Jump - Jump High!");
 
-    // Load textures
     Texture t1, t2, t3, resumeTex;
     t1.loadFromFile("images/background.png");
     t2.loadFromFile("images/platform.png");
     t3.loadFromFile("images/doodle.png");
     resumeTex.loadFromFile("images/resume.png");
 
-    // Load font
     Font font;
     font.openFromFile("images/font.otf");
 
-    // Sprites
     Sprite sBackground(t1), sPlat(t2), sPers(t3);
     Sprite resumeButton(resumeTex);
 
-    // Button positions (centered)
     float playButtonWidth = resumeButton.getGlobalBounds().size.x;
     resumeButton.setPosition(Vector2f(WINDOW_WIDTH / 2 - playButtonWidth / 2, 200));
 
-    // Pre-allocate all UI Text objects to avoid per-frame allocation
     Text titleText(font);
     titleText.setCharacterSize(52);
     titleText.setFillColor(ACCENT_COLOR);
@@ -147,7 +134,6 @@ int main()
     hsText.setCharacterSize(32);
     hsText.setFillColor(HOVER_COLOR);
 
-    // Playing/Paused state text objects
     Text scoreTextShadow(font);
     scoreTextShadow.setCharacterSize(24);
     scoreTextShadow.setFillColor(Color(0, 0, 0, 150));
@@ -171,7 +157,6 @@ int main()
     resumeLabel.setFillColor(SECONDARY_TEXT_COLOR);
     resumeLabel.setString("Click to Resume");
 
-    // Game Over state text objects
     Text gameOverText(font);
     gameOverText.setCharacterSize(50);
     gameOverText.setFillColor(Color(255, 100, 100));
@@ -200,14 +185,12 @@ int main()
     highScoreText.setCharacterSize(36);
     highScoreText.setFillColor(ACCENT_COLOR);
 
-    // Pre-allocate shape objects
     RectangleShape overlay(Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
     overlay.setFillColor(Color(0, 0, 0, 180));
 
     RectangleShape pauseOverlay(Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
     pauseOverlay.setFillColor(Color(0, 0, 0, 200));
 
-    // Game state
     enum GameState
     {
         MENU,
@@ -217,66 +200,61 @@ int main()
     };
     GameState state = MENU;
 
-    // Mouse position tracking for hover effect
     Vector2f mousePos(0, 0);
 
-    // Button bounds storage for consistent hover detection
+    // Button bounds used for hit detection across different game states
     FloatRect playButtonBounds;
     FloatRect pauseExitButtonBounds;
     FloatRect gameOverPlayAgainButtonBounds;
     FloatRect gameOverExitButtonBounds;
 
-    // Score system
     int currentScore = 0;
     int highScore = loadHighScore();
     int maxHeight = WINDOW_HEIGHT;
-    int minPlayerY = WINDOW_HEIGHT;         // Track minimum Y position reached by player
-    int activePlatforms = PLATFORM_COUNT;   // Number of active platforms (decreases with difficulty)
-    int lastDifficultyLevel = 0;            // Track previous difficulty to detect changes smoothly
-    int lastPlatformY = WINDOW_HEIGHT - 80; // Track last platform Y position for jump distance
+    int minPlayerY = WINDOW_HEIGHT;
+    int activePlatforms = PLATFORM_COUNT;
+    int lastDifficultyLevel = 0;
+    int lastPlatformY = WINDOW_HEIGHT - 80;
 
-    // Game objects
     point plat[PLATFORM_COUNT];
-    bool platScored[PLATFORM_COUNT]; // Track which platforms have been scored
+    bool platScored[PLATFORM_COUNT];
     int x = WINDOW_WIDTH / 2, y = WINDOW_HEIGHT - 145, h = CAMERA_THRESHOLD;
     float dx = 0, dy = 0;
-    int frameCounter = 0; // For smooth animations
+    int frameCounter = 0;
 
-    // Initialize platforms
     auto initializePlatforms = [&]()
     {
-        // Create platforms based on current difficulty
+        // Difficulty increases as score grows - fewer platforms available
         activePlatforms = PLATFORM_COUNT - (currentScore / DIFFICULTY_SCORE_THRESHOLD);
         if (activePlatforms < MIN_PLATFORMS)
         {
             activePlatforms = MIN_PLATFORMS;
         }
 
-        // Create platforms evenly spaced throughout the screen
         for (int i = 0; i < PLATFORM_COUNT; i++)
         {
             if (i < activePlatforms)
             {
                 plat[i].x = rand() % (SCREEN_BOUNDARY_RIGHT - PLATFORM_WIDTH);
                 plat[i].y = i * PLATFORM_SPACING;
-                platScored[i] = false; // Reset scoring status
+                platScored[i] = false;
             }
             else
             {
-                // Disable unused platforms by placing them off-screen
+                // Disable unused platforms by placing off-screen
                 plat[i].y = -PLATFORM_HEIGHT * 2;
                 platScored[i] = false;
             }
         }
-        // Ensure there's always a platform directly beneath the starting position
-        // Place a platform at the bottom where the player starts
+
+        // Always place starting platform at player spawn location
         plat[activePlatforms - 1].x = WINDOW_WIDTH / 2 - PLATFORM_WIDTH / 2;
         plat[activePlatforms - 1].y = WINDOW_HEIGHT - 80;
 
         maxHeight = WINDOW_HEIGHT;
         minPlayerY = WINDOW_HEIGHT;
         frameCounter = 0;
-        lastPlatformY = WINDOW_HEIGHT - 80; // Reset jump distance tracker
+        lastPlatformY = WINDOW_HEIGHT - 80;
     };
 
     initializePlatforms();
@@ -304,7 +282,6 @@ int main()
                         state = PLAYING;
                     }
                 }
-                // ESC to return to menu from game over
                 if (key && key->code == Keyboard::Key::Escape)
                 {
                     if (state == GAME_OVER || state == PAUSED)
@@ -330,13 +307,12 @@ int main()
                 {
                     mousePos = app.mapPixelToCoords(mouse->position);
 
-                    // Menu: Play button clicked
                     if (state == MENU)
                     {
                         if (playButtonBounds.contains(mousePos))
                         {
                             state = PLAYING;
-                            currentScore = 0; // Reset score for new game
+                            currentScore = 0;
                             initializePlatforms();
                             x = WINDOW_WIDTH / 2;
                             y = WINDOW_HEIGHT - 145;
@@ -345,7 +321,6 @@ int main()
                         }
                     }
 
-                    // Paused: Resume button clicked
                     if (state == PAUSED)
                     {
                         FloatRect resumeButtonBounds = resumeButton.getGlobalBounds();
@@ -355,22 +330,20 @@ int main()
                         }
                     }
 
-                    // Paused: Exit button clicked
                     if (state == PAUSED)
                     {
                         if (pauseExitButtonBounds.contains(mousePos))
                         {
-                            app.close(); // Close the application
+                            app.close();
                         }
                     }
 
-                    // Game Over: Play Again button clicked
                     if (state == GAME_OVER)
                     {
                         if (gameOverPlayAgainButtonBounds.contains(mousePos))
                         {
                             state = PLAYING;
-                            currentScore = 0; // Reset score for new game
+                            currentScore = 0;
                             initializePlatforms();
                             x = WINDOW_WIDTH / 2;
                             y = WINDOW_HEIGHT - 145;
@@ -379,22 +352,19 @@ int main()
                         }
                     }
 
-                    // Game Over: Exit button clicked
                     if (state == GAME_OVER)
                     {
                         if (gameOverExitButtonBounds.contains(mousePos))
                         {
-                            app.close(); // Close the application
+                            app.close();
                         }
                     }
                 }
             }
         }
 
-        // Game logic only runs when playing
         if (state == PLAYING)
         {
-            // Smooth horizontal movement with acceleration
             if (Keyboard::isKeyPressed(Keyboard::Key::Right))
             {
                 x += PLAYER_SPEED;
@@ -404,17 +374,16 @@ int main()
                 x -= PLAYER_SPEED;
             }
 
-            // Keep doodle within screen bounds
+            // Wrap player position within horizontal bounds
             if (x < SCREEN_BOUNDARY_LEFT)
                 x = SCREEN_BOUNDARY_LEFT;
             if (x > SCREEN_BOUNDARY_RIGHT)
                 x = SCREEN_BOUNDARY_RIGHT;
 
-            // Smooth gravity and falling
             dy += GRAVITY;
             y += (int)dy;
 
-            // Collision detection with platforms
+            // Check collision with each platform
             for (int i = 0; i < activePlatforms; i++)
             {
                 if ((x + PLAYER_WIDTH / 2 > plat[i].x) &&
@@ -424,28 +393,25 @@ int main()
                 {
                     dy = -JUMP_POWER;
 
-                    // Award points if this platform hasn't been scored yet
+                    // Only award points once per platform touch
                     if (!platScored[i])
                     {
-                        // Calculate jump distance (vertical distance from last platform)
+                        // Longer jumps are rewarded with more points
                         int jumpDistance = lastPlatformY - plat[i].y;
 
-                        // Award points based on jump distance
-                        // Longer jumps reward more points
                         if (jumpDistance >= 80)
                         {
-                            currentScore += 2; // Long jump: +2 points
+                            currentScore += 2;
                         }
                         else
                         {
-                            currentScore += 1; // Short jump: +1 point
+                            currentScore += 1;
                         }
 
-                        // Update last platform position for next jump calculation
                         lastPlatformY = plat[i].y;
-                        platScored[i] = true; // Mark platform as scored
+                        platScored[i] = true;
 
-                        // Calculate current difficulty level based on new score
+                        // Adjust difficulty: reduce available platforms as score increases
                         int currentDifficultyLevel = currentScore / DIFFICULTY_SCORE_THRESHOLD;
                         int newActivePlatforms = PLATFORM_COUNT - currentDifficultyLevel;
                         if (newActivePlatforms < MIN_PLATFORMS)
@@ -453,13 +419,12 @@ int main()
                             newActivePlatforms = MIN_PLATFORMS;
                         }
 
-                        // Update active platforms smoothly without sudden reinitialization
                         activePlatforms = newActivePlatforms;
                     }
                 }
             }
 
-            // Game Over condition: fell off bottom
+            // End game when player falls off screen
             if (y > WINDOW_HEIGHT)
             {
                 state = GAME_OVER;
@@ -470,7 +435,7 @@ int main()
                 }
             }
 
-            // Camera follow: when player goes up, scroll platforms
+            // Camera follows player upward - scroll platforms down relative to camera
             if (y < h)
             {
                 for (int i = 0; i < activePlatforms; i++)
@@ -478,13 +443,13 @@ int main()
                     y = h;
                     plat[i].y = plat[i].y - (int)dy;
 
-                    // Recycle platform when it goes off screen
+                    // Recycle platform when it scrolls off bottom
                     if (plat[i].y > WINDOW_HEIGHT)
                     {
                         plat[i].y = -PLATFORM_HEIGHT;
-                        platScored[i] = false; // Reset scoring status for recycled platform
+                        platScored[i] = false;
 
-                        // Find the highest active platform to maintain spacing
+                        // Find highest platform to maintain consistent spacing
                         int maxPlatformY = 0;
                         for (int j = 0; j < activePlatforms; j++)
                         {
@@ -492,7 +457,7 @@ int main()
                                 maxPlatformY = std::min(maxPlatformY, plat[j].y);
                         }
 
-                        // Spawn new platform below the highest one with consistent spacing
+                        // Spawn new platform at top
                         plat[i].y = maxPlatformY - PLATFORM_SPACING;
                         plat[i].x = rand() % (SCREEN_BOUNDARY_RIGHT - PLATFORM_WIDTH);
                     }
@@ -500,37 +465,31 @@ int main()
             }
         }
 
-        // Rendering
         app.clear(Color(20, 20, 40));
         app.draw(sBackground);
 
         if (state == MENU)
         {
-            // Title
             float titleX = (WINDOW_WIDTH - titleText.getGlobalBounds().size.x) / 2;
             titleText.setPosition(Vector2f(titleX, 40));
             app.draw(titleText);
 
-            // Subtitle
             float subtitleX = (WINDOW_WIDTH - subtitleText.getGlobalBounds().size.x) / 2;
             subtitleText.setPosition(Vector2f(subtitleX, 110));
             app.draw(subtitleText);
 
-            // Play button - centered
             float playButtonX = (WINDOW_WIDTH - BUTTON_WIDTH) / 2;
             float playButtonY = 170;
             playButtonBounds = FloatRect(Vector2f(playButtonX, playButtonY), Vector2f(BUTTON_WIDTH, BUTTON_HEIGHT));
             bool playHovered = playButtonBounds.contains(mousePos);
             drawStyledButton(app, "PLAY", font, Vector2f(playButtonX, playButtonY), Vector2f(BUTTON_WIDTH, BUTTON_HEIGHT), playHovered, 36);
 
-            // Instructions
             instructionsText.setPosition(Vector2f(PADDING, 280));
             app.draw(instructionsText);
 
             controlsText.setPosition(Vector2f(PADDING, 310));
             app.draw(controlsText);
 
-            // High score display - bottom
             hsLabelText.setPosition(Vector2f(PADDING, 450));
             app.draw(hsLabelText);
 
@@ -540,18 +499,15 @@ int main()
         }
         else if (state == PLAYING || state == PAUSED)
         {
-            // Draw platforms first
             for (int i = 0; i < activePlatforms; i++)
             {
                 sPlat.setPosition(Vector2f(plat[i].x, plat[i].y));
                 app.draw(sPlat);
             }
 
-            // Draw player on top of platforms
             sPers.setPosition(Vector2f(x, y));
             app.draw(sPers);
 
-            // Draw current score with shadow - positioned in top left with better styling
             scoreTextShadow.setPosition(Vector2f(13, 13));
             scoreTextShadow.setString(std::to_string(currentScore));
             app.draw(scoreTextShadow);
@@ -560,29 +516,23 @@ int main()
             scoreText.setString(std::to_string(currentScore));
             app.draw(scoreText);
 
-            // Score label
             scoreLabelText.setPosition(Vector2f(10, 40));
             app.draw(scoreLabelText);
 
             if (state == PAUSED)
             {
-                // Semi-transparent overlay
                 app.draw(overlay);
 
-                // Paused text - centered
                 float pausedX = (WINDOW_WIDTH - pausedText.getGlobalBounds().size.x) / 2;
                 pausedText.setPosition(Vector2f(pausedX, 80));
                 app.draw(pausedText);
 
-                // Resume button
                 app.draw(resumeButton);
 
-                // Resume button label
                 float resumeLabelX = (WINDOW_WIDTH - resumeLabel.getGlobalBounds().size.x) / 2;
                 resumeLabel.setPosition(Vector2f(resumeLabelX, 280));
                 app.draw(resumeLabel);
 
-                // Exit button - centered below
                 float exitButtonX = (WINDOW_WIDTH - BUTTON_WIDTH) / 2;
                 float exitButtonY = 330;
                 pauseExitButtonBounds = FloatRect(Vector2f(exitButtonX, exitButtonY), Vector2f(BUTTON_WIDTH, BUTTON_HEIGHT));
@@ -592,15 +542,12 @@ int main()
         }
         else if (state == GAME_OVER)
         {
-            // Semi-transparent overlay
             app.draw(pauseOverlay);
 
-            // Game Over text - centered
             float gameOverX = (WINDOW_WIDTH - gameOverText.getGlobalBounds().size.x) / 2;
             gameOverText.setPosition(Vector2f(gameOverX, 50));
             app.draw(gameOverText);
 
-            // Score section - centered
             float scoreLabelX = (WINDOW_WIDTH - scoreLabel.getGlobalBounds().size.x) / 2;
             scoreLabel.setPosition(Vector2f(scoreLabelX, 130));
             app.draw(scoreLabel);
@@ -610,12 +557,10 @@ int main()
             finalScoreText.setPosition(Vector2f(scoreX, 160));
             app.draw(finalScoreText);
 
-            // Separator line effect
             float sep1X = (WINDOW_WIDTH - separator1.getGlobalBounds().size.x) / 2;
             separator1.setPosition(Vector2f(sep1X, 225));
             app.draw(separator1);
 
-            // High score section - centered
             float hsLabelX = (WINDOW_WIDTH - highScoreLabel.getGlobalBounds().size.x) / 2;
             highScoreLabel.setPosition(Vector2f(hsLabelX, 250));
             app.draw(highScoreLabel);
@@ -625,14 +570,12 @@ int main()
             highScoreText.setPosition(Vector2f(hsX, 275));
             app.draw(highScoreText);
 
-            // Play Again button - centered
             float playAgainButtonX = (WINDOW_WIDTH - BUTTON_WIDTH) / 2;
             float playAgainButtonY = 350;
             gameOverPlayAgainButtonBounds = FloatRect(Vector2f(playAgainButtonX, playAgainButtonY), Vector2f(BUTTON_WIDTH, BUTTON_HEIGHT));
             bool playAgainHovered = gameOverPlayAgainButtonBounds.contains(mousePos);
             drawStyledButton(app, "PLAY AGAIN", font, Vector2f(playAgainButtonX, playAgainButtonY), Vector2f(BUTTON_WIDTH, BUTTON_HEIGHT), playAgainHovered, 22);
 
-            // Exit button - centered below
             float exitButtonX = (WINDOW_WIDTH - BUTTON_WIDTH) / 2;
             float exitButtonY = 410;
             gameOverExitButtonBounds = FloatRect(Vector2f(exitButtonX, exitButtonY), Vector2f(BUTTON_WIDTH, BUTTON_HEIGHT));
